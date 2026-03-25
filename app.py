@@ -1,41 +1,7 @@
 import streamlit as st
-import streamlit as st
-import streamlit as st
 import json
 from oauth2client.service_account import ServiceAccountCredentials
-
-# Load key from Streamlit secrets
-key_json_str = st.secrets["google_service_account"]["key"]
-key_dict = json.loads(key_json_str)
-
-# Force the private key into proper PEM format
-private_key = key_dict['private_key']
-
-# Remove any leading/trailing spaces
-private_key = private_key.strip()
-
-# Replace double backslashes \\n with real newlines
-private_key = private_key.replace('\\\\n', '\n').replace('\\n', '\n')
-
-# Ensure BEGIN/END markers are on their own lines
-if not private_key.startswith('-----BEGIN PRIVATE KEY-----'):
-    private_key = '-----BEGIN PRIVATE KEY-----\n' + private_key
-if not private_key.endswith('-----END PRIVATE KEY-----'):
-    private_key = private_key + '\n-----END PRIVATE KEY-----'
-
-key_dict['private_key'] = private_key
-
-# Define scopes
-scope = ['https://www.googleapis.com/auth/drive']
-
-# Load credentials
-try:
-    creds = ServiceAccountCredentials.from_json_keyfile_dict(key_dict, scope)
-    st.success("✅ Credentials loaded successfully!")
-except Exception as e:
-    st.error(f"❌ Failed to load credentials: {e}")
 import gspread
-from oauth2client.service_account import ServiceAccountCredentials
 import re
 
 # --- PAGE CONFIG ---
@@ -43,26 +9,41 @@ st.set_page_config(page_title="Roblox Outreach Tool", layout="centered")
 st.title("Roblox Outreach Tool")
 
 # --- GOOGLE SHEETS AUTHENTICATION ---
-scope = [
-    "https://spreadsheets.google.com/feeds",
-    "https://www.googleapis.com/auth/drive"
-]
+try:
+    # Load the service account JSON string from secrets
+    key_json_str = st.secrets["gcp_service_account"]["key"]
+    key_dict = json.loads(key_json_str)
 
-# Make a mutable copy of the secret dictionary
-key_dict = dict(st.secrets["gcp_service_account"])
+    # Fix the private key newlines and PEM formatting
+    private_key = key_dict['private_key'].strip()
+    private_key = private_key.replace('\\\\n', '\n').replace('\\n', '\n')
+    if not private_key.startswith('-----BEGIN PRIVATE KEY-----'):
+        private_key = '-----BEGIN PRIVATE KEY-----\n' + private_key
+    if not private_key.endswith('-----END PRIVATE KEY-----'):
+        private_key = private_key + '\n-----END PRIVATE KEY-----'
+    key_dict['private_key'] = private_key
 
-# Fix the private key line breaks
-key_dict["private_key"] = key_dict["private_key"].replace("\\n", "\n")
+    # Define scopes
+    scope = [
+        "https://spreadsheets.google.com/feeds",
+        "https://www.googleapis.com/auth/drive"
+    ]
 
-# Authorize and connect
-creds = ServiceAccountCredentials.from_json_keyfile_dict(key_dict, scope)
-client = gspread.authorize(creds)
+    # Authorize and connect
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(key_dict, scope)
+    client = gspread.authorize(creds)
 
-# Connect to your sheet
-sheet_name = "YOUR SHEET NAME"  # <-- Replace with your sheet name
-sheet = client.open(sheet_name).sheet1
+    # Connect to your sheet
+    sheet_name = "YOUR SHEET NAME"  # <-- Replace with your sheet name
+    sheet = client.open(sheet_name).sheet1
 
-st.success("✅ Google Sheets connected successfully!")
+    st.success("✅ Google Sheets connected successfully!")
+except KeyError:
+    st.error("❌ 'gcp_service_account' or 'key' not found in Streamlit secrets.")
+    st.stop()
+except Exception as e:
+    st.error(f"❌ Failed to load credentials or connect to Google Sheets: {e}")
+    st.stop()
 
 # --- FUNCTIONS ---
 def extract_game_id(link):
