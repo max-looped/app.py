@@ -47,12 +47,10 @@ except Exception as e:
 
 # --- FUNCTIONS ---
 def extract_game_id(link):
-    """Extract the game ID from a Roblox link"""
     match = re.search(r'/games/(\d+)', link)
-    return match.group(1) if match else link
+    return match.group(1) if match else link.strip()
 
 def load_data():
-    """Load existing game IDs from the Google Sheet"""
     try:
         data = sheet.get_all_records()
         return {str(row["game_id"]): row for row in data}
@@ -61,14 +59,12 @@ def load_data():
         return {}
 
 def save_entry(game_id, link, discord):
-    """Save a new entry to the Google Sheet"""
     try:
         sheet.append_row([game_id, link, discord])
     except Exception as e:
         st.error(f"Error saving entry: {e}")
 
 def generate_message(link):
-    """Generate outreach message for a game link"""
     return f"""Hey, I came across your game and it looks like a strong fit for what we’re currently targeting.
 
 I work in acquisitions for Looped Gaming—we buy Roblox games or partner with developers to help scale them.
@@ -81,25 +77,29 @@ You can check us out here: https://www.loopedgaming.com
 """
 
 # --- UI ---
-link = st.text_input("Game Link")
-discord = st.text_input("Discord Username")
+st.subheader("Add New Game")
+link_input = st.text_input("Game Link")
+discord_input = st.text_input("Discord Username")
 
 existing_data = load_data()
 existing_ids = set(existing_data.keys())
 
 if st.button("Check & Generate"):
-    if not link.strip():
+    if not link_input.strip():
         st.error("Please enter a game link!")
     else:
-        game_id = extract_game_id(link)
+        game_id = extract_game_id(link_input)
+
+        display_text = f"{link_input} | Discord: {discord_input}"
 
         if game_id in existing_ids:
-            st.error("⚠️ Duplicate detected")
+            st.error(f"⚠️ Duplicate: {display_text}")
+            st.text_area("Message to Send", "", height=200)
         else:
-            save_entry(game_id, link, discord)
-            st.success("✅ New game added")
+            save_entry(game_id, link_input, discord_input)
+            st.success(f"✅ New: {display_text}")
 
-            message = generate_message(link)
+            message = generate_message(link_input)
             st.text_area("Message to Send", message, height=200)
 
 # --- OPTIONAL: Live table of existing entries ---
