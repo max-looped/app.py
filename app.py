@@ -31,7 +31,7 @@ except Exception as e:
     st.stop()
 
 # --- CONNECT TO SHEET ---
-sheet_name = "YOUR SHEET NAME"  # <-- Replace with your actual sheet name
+sheet_name = "game"  # <-- Replace with your actual sheet name
 try:
     sheet = client.open(sheet_name).sheet1
 except Exception as e:
