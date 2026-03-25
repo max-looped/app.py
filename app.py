@@ -1,18 +1,39 @@
 import streamlit as st
 import streamlit as st
-
-# --- Google Service Account Setup ---
+import streamlit as st
 import json
 from oauth2client.service_account import ServiceAccountCredentials
 
+# Load key from Streamlit secrets
 key_json_str = st.secrets["google_service_account"]["key"]
 key_dict = json.loads(key_json_str)
-key_dict['private_key'] = key_dict['private_key'].replace('\\n', '\n')
-scope = ['https://www.googleapis.com/auth/drive']
-creds = ServiceAccountCredentials.from_json_keyfile_dict(key_dict, scope)
 
-st.success("✅ Google credentials loaded!")
-# --- End of setup ---
+# Force the private key into proper PEM format
+private_key = key_dict['private_key']
+
+# Remove any leading/trailing spaces
+private_key = private_key.strip()
+
+# Replace double backslashes \\n with real newlines
+private_key = private_key.replace('\\\\n', '\n').replace('\\n', '\n')
+
+# Ensure BEGIN/END markers are on their own lines
+if not private_key.startswith('-----BEGIN PRIVATE KEY-----'):
+    private_key = '-----BEGIN PRIVATE KEY-----\n' + private_key
+if not private_key.endswith('-----END PRIVATE KEY-----'):
+    private_key = private_key + '\n-----END PRIVATE KEY-----'
+
+key_dict['private_key'] = private_key
+
+# Define scopes
+scope = ['https://www.googleapis.com/auth/drive']
+
+# Load credentials
+try:
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(key_dict, scope)
+    st.success("✅ Credentials loaded successfully!")
+except Exception as e:
+    st.error(f"❌ Failed to load credentials: {e}")
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import re
