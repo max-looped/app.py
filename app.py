@@ -1,4 +1,18 @@
 import streamlit as st
+import streamlit as st
+
+# --- Google Service Account Setup ---
+import json
+from oauth2client.service_account import ServiceAccountCredentials
+
+key_json_str = st.secrets["google_service_account"]["key"]
+key_dict = json.loads(key_json_str)
+key_dict['private_key'] = key_dict['private_key'].replace('\\n', '\n')
+scope = ['https://www.googleapis.com/auth/drive']
+creds = ServiceAccountCredentials.from_json_keyfile_dict(key_dict, scope)
+
+st.success("✅ Google credentials loaded!")
+# --- End of setup ---
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import re
