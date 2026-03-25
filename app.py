@@ -1,30 +1,30 @@
+import json
 import streamlit as st
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import re
 
-# --- CONFIG ---
+# --- PAGE CONFIG ---
 st.set_page_config(page_title="Roblox Outreach Tool", layout="centered")
 st.title("Roblox Outreach Tool")
 
-# --- AUTH ---
-scope = ["https://spreadsheets.google.com/feeds",
-         "https://www.googleapis.com/auth/drive"]
+# --- AUTHENTICATION ---
+scope = [
+    "https://spreadsheets.google.com/feeds",
+    "https://www.googleapis.com/auth/drive"
+]
 
-# Copy secret JSON to mutable dict
-key_dict = dict(st.secrets["gcp_service_account"])
+# Make a mutable copy of your secrets
+key_dict = json.loads(json.dumps(st.secrets["gcp_service_account"]))
+# Ensure proper newlines in private key
+key_dict["private_key"] = key_dict["private_key"].replace("\\n", "\n")
 
-# Fix private key formatting
-if "private_key" in key_dict:
-    key_dict["private_key"] = key_dict["private_key"].replace("\\n", "\n")
-else:
-    st.error("Private key not found in GCP service account JSON!")
-    st.stop()
-
-# Connect to Google Sheets
+# Authorize
 creds = ServiceAccountCredentials.from_json_keyfile_dict(key_dict, scope)
 client = gspread.authorize(creds)
-sheet_name = "YOUR SHEET NAME"  # <-- change this
+
+# Connect to your sheet
+sheet_name = "YOUR SHEET NAME"  # <-- Replace this with your actual sheet name
 sheet = client.open(sheet_name).sheet1
 
 # --- FUNCTIONS ---
@@ -80,7 +80,7 @@ if st.button("Check & Generate"):
             message = generate_message(link)
             st.text_area("Message to Send", message, height=200)
 
-# --- OPTIONAL: Show a live table of existing entries ---
+# --- OPTIONAL: show a live table of existing entries ---
 st.subheader("Existing Games")
 if existing_data:
     st.table([[row["game_id"], row.get("link",""), row.get("discord","")] for row in existing_data.values()])
