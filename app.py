@@ -1,4 +1,3 @@
-import json
 import streamlit as st
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
@@ -8,31 +7,36 @@ import re
 st.set_page_config(page_title="Roblox Outreach Tool", layout="centered")
 st.title("Roblox Outreach Tool")
 
-# --- AUTHENTICATION ---
+# --- GOOGLE SHEETS AUTHENTICATION ---
 scope = [
     "https://spreadsheets.google.com/feeds",
     "https://www.googleapis.com/auth/drive"
 ]
 
-# Make a mutable copy of your secrets
-key_dict = json.loads(json.dumps(st.secrets["gcp_service_account"]))
-# Ensure proper newlines in private key
+# Make a mutable copy of the secret dictionary
+key_dict = dict(st.secrets["gcp_service_account"])
+
+# Fix the private key line breaks
 key_dict["private_key"] = key_dict["private_key"].replace("\\n", "\n")
 
-# Authorize
+# Authorize and connect
 creds = ServiceAccountCredentials.from_json_keyfile_dict(key_dict, scope)
 client = gspread.authorize(creds)
 
 # Connect to your sheet
-sheet_name = "YOUR SHEET NAME"  # <-- Replace this with your actual sheet name
+sheet_name = "YOUR SHEET NAME"  # <-- Replace with your sheet name
 sheet = client.open(sheet_name).sheet1
+
+st.success("✅ Google Sheets connected successfully!")
 
 # --- FUNCTIONS ---
 def extract_game_id(link):
+    """Extract the game ID from a Roblox link"""
     match = re.search(r'/games/(\d+)', link)
     return match.group(1) if match else link
 
 def load_data():
+    """Load existing game IDs from the Google Sheet"""
     try:
         data = sheet.get_all_records()
         return {str(row["game_id"]): row for row in data}
@@ -41,12 +45,14 @@ def load_data():
         return {}
 
 def save_entry(game_id, link, discord):
+    """Save a new entry to the Google Sheet"""
     try:
         sheet.append_row([game_id, link, discord])
     except Exception as e:
         st.error(f"Error saving entry: {e}")
 
 def generate_message(link):
+    """Generate outreach message for a game link"""
     return f"""Hey, I came across your game and it looks like a strong fit for what we’re currently targeting.
 
 I work in acquisitions for Looped Gaming—we buy Roblox games or partner with developers to help scale them.
@@ -80,7 +86,7 @@ if st.button("Check & Generate"):
             message = generate_message(link)
             st.text_area("Message to Send", message, height=200)
 
-# --- OPTIONAL: show a live table of existing entries ---
+# --- OPTIONAL: Live table of existing entries ---
 st.subheader("Existing Games")
 if existing_data:
     st.table([[row["game_id"], row.get("link",""), row.get("discord","")] for row in existing_data.values()])
